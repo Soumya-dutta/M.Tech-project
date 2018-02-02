@@ -8,17 +8,17 @@ leader_pos, leader_vel, time = [], [], []
 leader_disrupt_pos, leader_disrupt_vel, leader_disrupt_acc = [], [], []
 leader_acc, agent_inds, time_completed = [], [], []
 K1, K2, K3, time_val = 1, 1, 4.06, 0.0
-D, ball_rad, wait_time = 1000, 0.15, 30
+D, ball_rad, wait_time_val = 1000, 0.15, 30
 fpout, fvout = open('Position.csv', 'w'), open('Velocity.csv', 'w')
 faout = open('Input.csv', 'w')
 total_system_pos, total_system_vel = {}, {}
 total_system_acc = {}
 number_of_trips, agent_tag = {}, {}
-dist_to_switch = 8000
+dist_to_switch = 4000
 N = 15
 law1 = 0
-leader_dict = {}
-disruption_dist, disruption_dur, disruption_cnt = 9970, 1200, 0
+leader_dict, wait_time = {}, {}
+disruption_dist, disruption_dur, disruption_cnt = 8000, 1200, 0
 
 
 def nextval(v, d, acc):
@@ -77,6 +77,7 @@ def leader():
         leader_disrupt_acc.append(a_dis)
         time.append(round(time_val, 3))
         time_val += sample_time
+        round(time_val, 3)
         #print(leader_pos[-1])
         #print(time_val)
 
@@ -87,6 +88,8 @@ def complete(a_ind, num, leaders):
     global disruption_cnt
     #print(time_val)
     count, count_dis, flag = 0, 0, 0
+    for a in a_ind:
+        wait_time[a] = 0
     agents_not_started = [x for x in a_ind if x != '1' and x != str(num//2+1)]
     #print(agents_not_started)
     for a in agents_not_started:
@@ -97,7 +100,7 @@ def complete(a_ind, num, leaders):
             leader_d = total_system_pos[leader_for_agent][time_index]
             leader_v = total_system_vel[leader_for_agent][time_index]
             acc = calc_acc(leader_d, leader_v, agent_d[-1], agent_v[-1], 0)
-            print(a + " " + str(acc) + " " + str(leader_d) + " " + str(t))
+            #print(a + " " + str(acc) + " " + str(leader_d) + " " + str(t))
             v, d = nextval(agent_v[-1], agent_d[-1], acc)
             agent_d.append(d), agent_v.append(v)
             agent_acc.append(acc)
@@ -141,16 +144,18 @@ def complete(a_ind, num, leaders):
                 acc = calc_acc(disruption_dist, 0, agent_d, agent_v, 1)
             else:
                 acc = calc_acc(leader_d, leader_v, agent_d, agent_v, 0)
-            if agent_d == 0 and count <= wait_time and acc > 0:
-                acc, count = 0, count + 1
-            if count == wait_time:
-                count = 0
-                acc = calc_acc(leader_d, leader_v, agent_d, agent_v, 0)
-            if flag == 1:
+            if agent_d == 0 and wait_time[a] <= wait_time_val:
+                acc, wait_time[a] = 0, wait_time[a] + 1
+            if wait_time[a] > wait_time_val and acc > 0:
+                wait_time[a] = 0
+                #acc = calc_acc(leader_d, leader_v, agent_d, agent_v, 0)
+
+            if flag == 1 and a == '1':
                 flag = 0
                 agent_d, agent_v = disruption_dist, 0
                 acc = 0
             v, d = nextval(agent_v, agent_d, acc)
+
             #print(d)
             if d > tot_distance-ball_rad:
                 #print(a)
